@@ -131,7 +131,7 @@ class requests_hosts:
         else:
           pass
         # number of hosts
-        if body['total'] is not None:
+        if body is not None:
           g_hosts_count=GaugeMetricFamily("foreman_exporter_hosts_count", 'foreman host count',labels=['foreman_hostname'])
           g_hosts_count.add_metric([request_hostname], int(body['total']))
           yield g_hosts_count
