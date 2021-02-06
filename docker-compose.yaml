@@ -1,0 +1,8 @@
+version: "3.8"
+services:
+  foreman_exporter:
+    image: marcinbojko/foreman_exporter:latest
+    ports:
+     - "8000:8000"
+    env_file:
+      ./foreman_exporter.env
