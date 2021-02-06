@@ -1,13 +1,16 @@
 FROM python:3.9.1-alpine
 COPY app/* /app/
-RUN apk add --no-cache --update -t deps curl \
-  && python -m pip install --upgrade pip \
-  && pip install --no-cache-dir -r /app/pip-requirements.txt
+RUN apk add --no-cache --update -t deps curl tzdata \
+  && python -m pip install --upgrade pip --no-cache-dir \
+  && pip install --no-cache-dir -r /app/pip-requirements.txt \
+  && addgroup -S python-group && adduser -G python-group -S python-user
+USER python-user
 WORKDIR /app
 ENV PYTHONPATH '/app/'
-LABEL VERSION="0.0.2"
+ENV TZ "Europe/Warsaw"
+LABEL VERSION="0.0.3"
 LABEL RELEASE="foreman_exporter"
 LABEL MAINTAINER="marcinbojko"
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD curl --fail http://localhost:8000 || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --retries=2 CMD curl -f http://localhost:8000 || exit 1
 EXPOSE 8000
-CMD ["python","/app/foreman_exporter.py"]
+CMD ["python","-u","/app/foreman_exporter.py"]

@@ -82,10 +82,11 @@ services:
 
 ## To DO
 
-- replace prometheus http server with Flask
+- replace prometheus http server with `Flask`
 - change path to /metrics
 - add more API checks (facts maybe?)
 - Kubernetes setup
+- switch to `urllib3` instead of `requests`
 - improve python skills
 
 ## About

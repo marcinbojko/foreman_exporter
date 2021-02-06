@@ -1,160 +1,162 @@
 #!/bin/python3
-
-import os
-import json
-import requests
-import random
-import time
+''' foreman exporter '''
 import datetime
 import distutils.core
-import urllib.parse
-from prometheus_client.core import GaugeMetricFamily,CounterMetricFamily,REGISTRY
-from prometheus_client import start_http_server, Summary, Counter, Histogram,Gauge
+import json
+import os
+import time
+import urllib
+
+import requests
+from prometheus_client import Summary, start_http_server
+from prometheus_client.core import REGISTRY, GaugeMetricFamily
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 #Variables
-body=None
-response=None
+FOREMAN_HOSTS_BODY=None
+FOREMAN_HOSTS_RESPONSE=None
 
 try:
-  if os.getenv("FOREMAN_REQUEST_URI") is not None:
-    request_uri=str(os.getenv("FOREMAN_REQUEST_URI")+'/api/hosts/')
-    request_hostname=(urllib.parse.urlparse(request_uri)).netloc
-  else:
-    request_uri="https://foreman.sample.com/api/hosts"
-    request_hostname=(urllib.parse.urlparse(request_uri)).netloc
-    pass
-  if os.getenv("FOREMAN_REQUEST_USER") is not None:
-    request_user=str(os.getenv("FOREMAN_REQUEST_USER"))
-  else:
-    request_user="api"
-    pass
-  if os.getenv("FOREMAN_REQUEST_PASSWORD") is not None:
-    request_password=str(os.getenv("FOREMAN_REQUEST_PASSWORD"))
-  else:
-    request_password="api"
-    pass
-  if os.getenv("FOREMAN_REQUEST_TLS_VERIFY") is not None:
-    request_tls_verify=distutils.util.strtobool((os.getenv("FOREMAN_REQUEST_TLS_VERIFY")))
-  else:
-    request_tls_verify=False
-    pass
-  if os.getenv("FOREMAN_REQUEST_TIMEOUT") is not None:
-    request_timeout=int(os.getenv("FOREMAN_REQUEST_TIMEOUT"))
-  else:
-    request_timeout=60
-    pass
-  if os.getenv("FOREMAN_REQUEST_INTERVAL") is not None:
-    request_interval=int(os.getenv("FOREMAN_REQUEST_INTERVAL"))
-  else:
-    request_interval=120
-    pass
+    if os.getenv("FOREMAN_REQUEST_URI") is not None:
+        REQUEST_URI=str(os.getenv("FOREMAN_REQUEST_URI")+'/api/hosts/')
+        REQUEST_HOSTNAME=(urllib.parse.urlparse(REQUEST_URI)).netloc
+    else:
+        REQUEST_URI="https://foreman.sample.com/api/hosts"
+        REQUEST_HOSTNAME=(urllib.parse.urlparse(REQUEST_URI)).netloc
+    if os.getenv("FOREMAN_REQUEST_USER") is not None:
+        REQUEST_USER=str(os.getenv("FOREMAN_REQUEST_USER"))
+    else:
+        REQUEST_USER="api"
+    if os.getenv("FOREMAN_REQUEST_PASSWORD") is not None:
+        REQUEST_PASSWORD=str(os.getenv("FOREMAN_REQUEST_PASSWORD"))
+    else:
+        REQUEST_PASSWORD="api"
+    if os.getenv("FOREMAN_REQUEST_TLS_VERIFY") is not None:
+        REQUEST_TLS_VERIFY=distutils.util.strtobool((os.getenv("FOREMAN_REQUEST_TLS_VERIFY")))
+    else:
+        REQUEST_TLS_VERIFY=False
+    if os.getenv("FOREMAN_REQUEST_TIMEOUT") is not None:
+        REQUEST_TIMEOUT=int(os.getenv("FOREMAN_REQUEST_TIMEOUT"))
+    else:
+        REQUEST_TIMEOUT=60
+    if os.getenv("FOREMAN_REQUEST_INTERVAL") is not None:
+        REQUEST_INTERVAL=int(os.getenv("FOREMAN_REQUEST_INTERVAL"))
+    else:
+        REQUEST_INTERVAL=120
 except:
-  print ("Evaluation of Environmental Variables failed")
-  raise
+    print ("Evaluation of Environmental Variables failed")
+    raise
 
-if all(v_check is not None for v_check in [request_uri,request_hostname, request_user, request_password, request_tls_verify,request_timeout,request_interval]):
-  pass
+if all(v_check is not None for v_check in [REQUEST_URI,REQUEST_HOSTNAME, REQUEST_USER, REQUEST_PASSWORD, REQUEST_TLS_VERIFY,REQUEST_TIMEOUT,REQUEST_INTERVAL]):
+    pass
 else:
-  print ("One of variables is empty")
-  raise SystemExit(-1)
+    print ("One of variables is empty")
+    raise SystemExit(1)
 
 print ("Variables:")
-print ('request_uri        = '+str(request_uri))
-print ('request_hostname   = '+str(request_hostname))
-print ('request_user       = '+str(request_user))
+print ('REQUEST_URI        = '+str(REQUEST_URI))
+print ('REQUEST_HOSTNAME   = '+str(REQUEST_HOSTNAME))
+print ('REQUEST_USER       = '+str(REQUEST_USER))
 # getpass to hide passwords?
-print ('request_password   = '+str(request_password))
-print ('request_tls_verify = '+str(request_tls_verify))
-print ('request_timeout    = '+str(request_timeout))
-print ('request_interval   = '+str(request_interval))
-
+print ('REQUEST_PASSWORD   = '+str(REQUEST_PASSWORD))
+print ('REQUEST_TLS_VERIFY = '+str(REQUEST_TLS_VERIFY))
+print ('REQUEST_TIMEOUT    = '+str(REQUEST_TIMEOUT))
+print ('REQUEST_INTERVAL   = '+str(REQUEST_INTERVAL))
 
 # initial data
 def f_requests_hosts():
-  global response
-  global body
-  body=None
-  while body is None:
+    ''' Process Foreman's hosts response '''
+    global FOREMAN_HOSTS_RESPONSE
+    global FOREMAN_HOSTS_BODY
     try:
-      response = requests.get(request_uri,auth=(request_user,request_password),verify=request_tls_verify, timeout=request_timeout)
-      body = json.loads(response.text)
-      if 200 >= response.status_code <= 399:
-          timestamp = datetime.datetime.now()
-          print (timestamp,"Request at", request_uri, "with code", response.status_code, "took", response.elapsed.seconds, "seconds")
-          pass
-      else:
-        print ("Response code not proper",response.status_code)
+        response = requests.get(REQUEST_URI,auth=(REQUEST_USER,REQUEST_PASSWORD),verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        body = json.loads(response.text)
+        if 200 >= response.status_code <= 399:
+            timestamp = datetime.datetime.now()
+            print (timestamp,"Request at", REQUEST_URI, "with code", response.status_code, "took", response.elapsed.seconds,  "seconds")
+            FOREMAN_HOSTS_BODY=body
+            FOREMAN_HOSTS_RESPONSE=response
+        else:
+            print ("Response code not proper",response.status_code)
     except:
-      print ("Request at", request_uri, "failed with code", response.status_code )
-      time.sleep (3)
-      pass
+        print ("Request at", REQUEST_URI, "failed with code", response.status_code )
+        time.sleep (3)
+        raise
 
 # register class
-class requests_hosts:
+class RequestsHosts:
+    ''' Register Prometheus Metrics for Foremant's hosts '''
     def __init__(self):
         pass
-    def collect(self):
+    @staticmethod
+    def collect():
+        ''' foremans gauges '''
         g_hosts = GaugeMetricFamily("foreman_exporter_hosts", 'foreman host status', labels=['hostname','domain','configuration','configuration_label','puppet_status','global_label','environment','operatingsystem', 'foreman_hostname'])
-        if body is not None:
-          for each in body['results']:
-            name=str(each['name'])
-            domain=str(each['domain_name'])
-            status=(each['global_status'])
-            global_label=str(each['global_status_label'])
-            configuration_status=str(each['configuration_status'])
-            configuration_status_label=str(each['configuration_status_label'])
-            puppet_status=str(each['puppet_status'])
-            environment_name=str(each['environment_name'])
-            operatingsystem=str(each['operatingsystem_name'])
-            if (
-                name is None or domain is None or status is None or configuration_status is None or configuration_status_label is None
-               ):
-              continue
-            else:
-              if global_label is None:
-                global_label='199'
-              if puppet_status is None:
-                puppet_status='199'
-              if environment_name is None:
-                environment_name='unknown'
-              if operatingsystem is None:
-                operatingsystem='unknown'
-              g_hosts.add_metric([name,domain,configuration_status,configuration_status_label,puppet_status,global_label,environment_name,operatingsystem,request_hostname], status)
-          yield g_hosts
+        if FOREMAN_HOSTS_BODY is not None:
+            for each in FOREMAN_HOSTS_BODY['results']:
+                name=str(each['name'])
+                domain=str(each['domain_name'])
+                status=(each['global_status'])
+                global_label=str(each['global_status_label'])
+                configuration_status=str(each['configuration_status'])
+                configuration_status_label=str(each['configuration_status_label'])
+                puppet_status=str(each['puppet_status'])
+                environment_name=str(each['environment_name'])
+                operatingsystem=str(each['operatingsystem_name'])
+                if (
+                  name is None or domain is None or status is None or configuration_status is None or configuration_status_label is None
+                  ):
+                    continue
+                if global_label is None:
+                    global_label='199'
+                if puppet_status is None:
+                    puppet_status='199'
+                if environment_name is None:
+                    environment_name='unknown'
+                if operatingsystem is None:
+                    operatingsystem='unknown'
+                g_hosts.add_metric([name,domain,configuration_status,configuration_status_label,puppet_status,global_label,environment_name,operatingsystem,REQUEST_HOSTNAME], status)
+            yield g_hosts
         else:
-          pass
+            pass
         # How long the process was made
-        if response.elapsed.seconds is not None:
-          g_hosts_time = GaugeMetricFamily("foreman_exporter_hosts_request_time_seconds", 'foreman host request time seconds',labels=['foreman_hostname'])
-          g_hosts_time.add_metric([request_hostname], int(response.elapsed.seconds))
-          yield g_hosts_time
+        if FOREMAN_HOSTS_RESPONSE.elapsed.seconds is not None:
+            g_hosts_time = GaugeMetricFamily("foreman_exporter_hosts_request_time_seconds", 'foreman host request time seconds',labels=['foreman_hostname'])
+            g_hosts_time.add_metric([REQUEST_HOSTNAME], int(FOREMAN_HOSTS_RESPONSE.elapsed.seconds))
+            yield g_hosts_time
         else:
-          pass
+            pass
         # number of hosts
-        if body is not None:
-          g_hosts_count=GaugeMetricFamily("foreman_exporter_hosts_count", 'foreman host count',labels=['foreman_hostname'])
-          g_hosts_count.add_metric([request_hostname], int(body['total']))
-          yield g_hosts_count
+        if FOREMAN_HOSTS_BODY is not None:
+            g_hosts_count=GaugeMetricFamily("foreman_exporter_hosts_count", 'foreman host count',labels=['foreman_hostname'])
+            g_hosts_count.add_metric([REQUEST_HOSTNAME], int(FOREMAN_HOSTS_BODY['total']))
+            yield g_hosts_count
         else:
-          pass
+            pass
 # Create a metric to track time spent and requests made.
 REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
 @REQUEST_TIME.time()
 
-
 def f_process_request():
     """A dummy function that takes some time."""
-    time.sleep(request_interval)
+    time.sleep(REQUEST_INTERVAL)
+
+def f_start_http():
+    ''' Start http server '''
+    timestamp = datetime.datetime.now()
+    print (timestamp,"Starting http server")
+    # Start up the server to expose the metrics.
+    start_http_server(8000)
 
 if __name__ == '__main__':
-    # Start up the server to expose the metrics.
     # Initial fill in
     f_requests_hosts()
-    print ("Starting http server")
-    start_http_server(8000)
+    f_start_http()
     # Register gauges
-    REGISTRY.register(requests_hosts())
+    REGISTRY.register(RequestsHosts())
     # Generate some requests.
     while True:
-      f_process_request()
-      f_requests_hosts()
+        f_process_request()
+        f_requests_hosts()
