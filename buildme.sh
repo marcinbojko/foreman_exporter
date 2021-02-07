@@ -16,7 +16,8 @@ fi
 # coverage
 if [ "$build_status" == 0 ]; then
   echo "Docker build succeed"
-  rm -rf dive.log||true
+  rm -rfv dive.log||true
+  rm -rfv ./.coverage.*||true
   trivy --output .coverage."$version"_trivy.txt "$release":"$version"
   dive --ci "$release":"$version" > .coverage."$version"_dive.txt
   dockle -f json -o .coverage."$version"_dockle.txt "$release":"$version"

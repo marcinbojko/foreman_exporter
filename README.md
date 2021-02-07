@@ -9,6 +9,7 @@
     - [Configuration](#configuration)
     - [Docker-compose example](#docker-compose-example)
     - [Prometheus scrape example](#prometheus-scrape-example)
+  - [Kubernetes example](#kubernetes-example)
   - [To DO](#to-do)
   - [About](#about)
 
@@ -50,8 +51,8 @@ FOREMAN_REQUEST_URI=https://foreman.home.lan
 FOREMAN_REQUEST_USER=api
 FOREMAN_REQUEST_PASSWORD=api
 FOREMAN_REQUEST_TLS_VERIFY=false
-FOREMAN_REQUEST_TIMEOUT=40
-FOREMAN_REQUEST_INTERVAL=50
+FOREMAN_REQUEST_TIMEOUT=60
+FOREMAN_REQUEST_INTERVAL=120
 ```
 
 ### Docker-compose example
@@ -70,14 +71,79 @@ services:
 ### Prometheus scrape example
 
 ```yaml
-  foreman_exporter:
-    container_name: foreman_exporter
-    image: marcinbojko/foreman_exporter:latest
-    ports:
-     - "8000:8000"
-    env_file:
-      ./foreman_exporter/foreman_exporter.env
-    restart: unless-stopped
+- job_name: 'foreman_exporter'
+  scrape_interval: 120s
+  honor_labels: true
+  metrics_path: '/'
+  scheme: http
+  static_configs:
+    - targets:
+      - 'foreman_exporter:8000'
+      labels:
+        app: "foreman-exporter"
+        env: "int"
+        team: "it"
+```
+
+## Kubernetes example
+
+Working example is available as `./foreman-exporter.yaml`
+
+To use:
+
+- Change ENV Variables in config section of a file:
+
+  ```yaml
+  ---
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: foreman-exporter-env-config
+  data:
+    FOREMAN_REQUEST_INTERVAL: "120"
+    FOREMAN_REQUEST_TIMEOUT: "60"
+    FOREMAN_REQUEST_TLS_VERIFY: "false"
+    FOREMAN_REQUEST_URI: https://foreman.sample.com
+    FOREMAN_REQUEST_USER: api
+  ---
+  ```
+
+- Generate new secret for `FOREMAN_REQUEST_PASSWORD`
+
+  ```bash
+  echo -n newpassword|base64
+  ```
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: foreman-exporter-env-secret
+  data:
+    FOREMAN_REQUEST_PASSWORD: base64-password-here-from-above
+  ---
+  ```
+
+- Change ingress name or/and add tls section
+
+```yaml
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: foreman-exporter-ingress
+  labels:
+      name: foreman-exporter
+spec:
+  rules:
+  - host: foreman-exporter.sample.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          serviceName: foreman-exporter-service
+          servicePort: 8000
 ```
 
 ## To DO
@@ -85,7 +151,7 @@ services:
 - replace prometheus http server with `Flask`
 - change path to /metrics
 - add more API checks (facts maybe?)
-- Kubernetes setup
+- ~~Kubernetes setup~~
 - switch to `urllib3` instead of `requests`
 - improve python skills
 

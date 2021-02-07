@@ -1,5 +1,10 @@
 # Changelog
 
+## 2021-02-07 0.0.4
+
+* added Kubernetes usage example
+* updated README.md
+
 ## 2021-02-06 0.0.3
 
 * fixed clearing `body` variable in loop
