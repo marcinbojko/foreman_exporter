@@ -126,25 +126,31 @@ To use:
 
 - Change ingress name or/and add tls section
 
-```yaml
----
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: foreman-exporter-ingress
-  labels:
-      name: foreman-exporter
-spec:
-  rules:
-  - host: foreman-exporter.sample.com
-    http:
-      paths:
-      - pathType: Prefix
-        path: "/"
-        backend:
-          serviceName: foreman-exporter-service
-          servicePort: 8000
-```
+  ```yaml
+  ---
+   apiVersion: extensions/v1beta1
+   kind: Ingress
+   metadata:
+     name: foreman-exporter-ingress
+     labels:
+         name: foreman-exporter
+   spec:
+     rules:
+     - host: foreman-exporter.sample.com
+       http:
+         paths:
+         - pathType: Prefix
+           path: "/"
+           backend:
+             serviceName: foreman-exporter-service
+             servicePort: 8000
+   ```
+
+- Run
+
+  ```bash
+  kubectl apply -f foreman-exporter.yaml
+  ```
 
 ## To DO
 

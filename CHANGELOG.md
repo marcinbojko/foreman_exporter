@@ -1,5 +1,11 @@
 # Changelog
 
+## 2021-02-07 0.0.5
+
+* improved raise exception
+* updated README.md
+* print formatting
+
 ## 2021-02-07 0.0.4
 
 * added Kubernetes usage example
