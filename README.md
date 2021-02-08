@@ -5,7 +5,11 @@
   - [What is it](#what-is-it)
     - [Metrics](#metrics)
     - [Foreman presented fields and labels](#foreman-presented-fields-and-labels)
+    - [Tested with](#tested-with)
   - [Usage](#usage)
+    - [Foreman configuration](#foreman-configuration)
+      - [In Foreman, create a role first](#in-foreman-create-a-role-first)
+      - [The assign it to an user](#the-assign-it-to-an-user)
     - [Configuration](#configuration)
     - [Docker-compose example](#docker-compose-example)
     - [Prometheus scrape example](#prometheus-scrape-example)
@@ -23,8 +27,26 @@ It can be used as a stats tool for configuration applying status, hosts status, 
 ### Metrics
 
 - `foreman_exporter_hosts` - Gauge - returns host list with their statuses
-- `foreman_exporter_hosts_request_time_seconds` - Gauge - return time needed to do a query
+- `foreman_exporter_hosts_request_time_seconds` - Gauge - returns time needed to do a  `/api/hosts` query
 - `foreman_exporter_hosts_count` - Gauge - total number of hosts returned by query
+- `foreman_exporter_dashboard_total_hosts` - Gauge - "Total hosts count"
+- `foreman_exporter_dashboard_bad_hosts` - Gauge - "Hosts with error state"
+- `foreman_exporter_dashboard_bad_hosts_enabled` - Gauge - "Hosts with error state and alerts enabled"
+- `foreman_exporter_dashboard_active_hosts` - Gauge - "Hosts which recently applied changes"
+- `foreman_exporter_dashboard_active_hosts_ok` - Gauge - "Hosts which recently applied changes successfully"
+- `foreman_exporter_dashboard_active_hosts_ok_enabled` - Gauge - "Hosts which recently applied changes successfully with alerts enabled"
+- `foreman_exporter_dashboard_ok_hosts` - Gauge - "Hosts without changes or errors"
+- `foreman_exporter_dashboard_ok_hosts_enabled` - Gauge - "Hosts without changes or errors, with alerts enabled"
+- `foreman_exporter_dashboard_disabled_hosts` - Gauge - "Hosts with alerts disabled"
+- `foreman_exporter_dashboard_pending_hosts` - Gauge - "Hosts that had pending changes"
+- `foreman_exporter_dashboard_pending_hosts_enabled` - Gauge - "Hosts that had pending changes with alerts enabled"
+- `foreman_exporter_dashboard_out_of_sync_hosts` - Gauge - "Out of sync hosts"
+- `foreman_exporter_dashboard_out_of_sync_hosts_enabled` - Gauge - "Out of sync hosts with alerts enabled"
+- `foreman_exporter_dashboard_good_hosts` - Gauge - "Hosts without errors"
+- `foreman_exporter_dashboard_good_hosts_enabled` - Gauge - "Hosts without errors, with alerts enabled"
+- `foreman_exporter_dashboard_percentage` - Gauge - "Hosts without errors percent"
+- `foreman_exporter_dashboard_reports_missing` - Gauge - "Hosts which are not reporting"
+- `foreman_exporter_dashboard_request_time_seconds` - Gauge - returns time needed to do a `/api/dashboards` query
 
 ### Foreman presented fields and labels
 
@@ -36,11 +58,29 @@ It can be used as a stats tool for configuration applying status, hosts status, 
 |configuration_status|configuration_status|
 |configuration_status_label|configuration_status_label|
 |puppet_status|puppet_status|
-|environment_name|environment|
+|environment_name|puppet_environment|
 |operatingsystem_name|operatingsystem|
 |-|hostname|
 
+### Tested with
+
+- Foreman 1.22.x
+
+- Foreman 1.23.x
+
 ## Usage
+
+### Foreman configuration
+
+To use access to API you need an user with at least 'viewer' role for hosts and `access dashboard` role to read dashboards statuses.
+
+#### In Foreman, create a role first
+
+![create_role](./images/01_create_role.png)
+
+#### The assign it to an user
+
+![assign_role](./images/02_assign_role_to_user.png)
 
 ### Configuration
 

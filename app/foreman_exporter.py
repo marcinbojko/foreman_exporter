@@ -4,6 +4,7 @@ import datetime
 import distutils.core
 import json
 import os
+import threading
 import time
 import urllib
 
@@ -17,14 +18,19 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 # Variables
 FOREMAN_HOSTS_BODY = None
 FOREMAN_HOSTS_RESPONSE = None
+FOREMAN_DASHBOARD_BODY = None
+FOREMAN_DASHBOARD_RESPONSE = None
+FOREMAN_DASHBOARD_ITEMS = []
+
 
 try:
     if os.getenv("FOREMAN_REQUEST_URI") is not None:
-        REQUEST_URI = str(os.getenv("FOREMAN_REQUEST_URI")+'/api/hosts/')
-        REQUEST_HOSTNAME = (urllib.parse.urlparse(REQUEST_URI)).netloc
+        REQUEST_URI = str(os.getenv("FOREMAN_REQUEST_URI"))
+        if not REQUEST_URI.endswith("/"):
+            REQUEST_URI += "/"
     else:
-        REQUEST_URI = "https://foreman.sample.com/api/hosts"
-        REQUEST_HOSTNAME = (urllib.parse.urlparse(REQUEST_URI)).netloc
+        REQUEST_URI = "https://foreman.sample.com/"
+    REQUEST_HOSTNAME = (urllib.parse.urlparse(REQUEST_URI)).netloc
     if os.getenv("FOREMAN_REQUEST_USER") is not None:
         REQUEST_USER = str(os.getenv("FOREMAN_REQUEST_USER"))
     else:
@@ -73,20 +79,43 @@ def f_requests_hosts():
     global FOREMAN_HOSTS_RESPONSE
     global FOREMAN_HOSTS_BODY
     try:
-        response = requests.get(REQUEST_URI, auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response = requests.get(REQUEST_URI+'api/hosts/', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         body = json.loads(response.text)
         if 200 >= response.status_code <= 399:
             l_timestamp = datetime.datetime.now()
-            print(l_timestamp, "Request at", REQUEST_URI, "with code", response.status_code, "took", response.elapsed.seconds, "seconds")
+            print(f"{l_timestamp} Hosts request at {REQUEST_URI}api/hosts with code {response.status_code} took {response.elapsed.seconds} seconds")
             FOREMAN_HOSTS_BODY = body
             FOREMAN_HOSTS_RESPONSE = response
         else:
             l_timestamp = datetime.datetime.now()
-            print(l_timestamp, "Response code not proper", response.status_code)
+            print(f"{l_timestamp} Response code not proper: {response.status_code}")
     except requests.exceptions.RequestException as err:
         l_timestamp = datetime.datetime.now()
-        print(l_timestamp, "Request at", REQUEST_URI, "failed with code", err)
+        print(f"{l_timestamp} Request at: {REQUEST_URI}api/hosts failed with code {err}")
+        time.sleep(1)
+        raise SystemExit(err) from err
+
+
+def f_requests_dashboard():
+    ''' Process Foreman's dashboard response '''
+    global FOREMAN_DASHBOARD_RESPONSE
+    global FOREMAN_DASHBOARD_BODY
+    try:
+        response = requests.get(REQUEST_URI+'api/dashboard', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        body = json.loads(response.text)
+        if 200 >= response.status_code <= 399:
+            l_timestamp = datetime.datetime.now()
+            print(f"{l_timestamp} Dashboard request at: {REQUEST_URI}api/dashboard with code {response.status_code} took {response.elapsed.seconds} seconds")
+            FOREMAN_DASHBOARD_BODY = body
+            FOREMAN_DASHBOARD_RESPONSE = response
+        else:
+            l_timestamp = datetime.datetime.now()
+            print(f"{l_timestamp} Response code not proper:  {response.status_code}")
+    except requests.exceptions.RequestException as err:
+        l_timestamp = datetime.datetime.now()
+        print(f"{l_timestamp} Request at: {REQUEST_URI}api/dashboard failed with code {err}")
         time.sleep(1)
         raise SystemExit(err) from err
 
@@ -101,7 +130,7 @@ class RequestsHosts:
     def collect():
         ''' foremans gauges '''
         g_hosts = GaugeMetricFamily("foreman_exporter_hosts", 'foreman host status', labels=['hostname', 'domain', 'configuration', 'configuration_label',
-                                    'puppet_status', 'global_label', 'environment', 'operatingsystem', 'foreman_hostname'])
+                                    'puppet_status', 'global_label', 'puppet_environment', 'operatingsystem', 'foreman_hostname'])
         if FOREMAN_HOSTS_BODY is not None:
             for each in FOREMAN_HOSTS_BODY['results']:
                 name = str(each['name'])
@@ -144,6 +173,28 @@ class RequestsHosts:
             yield g_hosts_count
         else:
             pass
+        # Dashboard section
+        g_dashboard = {}
+        FOREMAN_DASHBOARD_ITEMS.clear()
+        if FOREMAN_DASHBOARD_BODY is not None:
+            for each in FOREMAN_DASHBOARD_BODY:
+                FOREMAN_DASHBOARD_ITEMS.append(each)
+                # total hosts
+            if FOREMAN_DASHBOARD_ITEMS is not None:
+                for each in FOREMAN_DASHBOARD_ITEMS:
+                    if each != 'glossary':
+                        g_dashboard[each] = GaugeMetricFamily("foreman_exporter_dashboard_"+each, FOREMAN_DASHBOARD_BODY['glossary'][each], labels=['foreman_hostname'])
+                        g_dashboard[each].add_metric([REQUEST_HOSTNAME], int(FOREMAN_DASHBOARD_BODY[each]))
+                        yield g_dashboard[each]
+        else:
+            pass
+        # How long the process (request dashboard) was made
+        if FOREMAN_DASHBOARD_RESPONSE.elapsed.seconds is not None:
+            g_dashboard_time = GaugeMetricFamily("foreman_exporter_dashboard_request_time_seconds", 'foreman dashboard request time seconds', labels=['foreman_hostname'])
+            g_dashboard_time.add_metric([REQUEST_HOSTNAME], int(FOREMAN_DASHBOARD_RESPONSE.elapsed.seconds))
+            yield g_dashboard_time
+        else:
+            pass
 
 
 # Create a metric to track time spent and requests made.
@@ -164,13 +215,20 @@ def f_start_http():
     start_http_server(8000)
 
 
+def main():
+    ''' Main threading loop '''
+    thread = threading.Thread(target=f_process_request)
+    thread.start()
+    thread.join()
+    f_process_request()
+    f_requests_hosts()
+
+
 if __name__ == '__main__':
     # Initial fill in
     f_requests_hosts()
+    f_requests_dashboard()
     f_start_http()
     # Register gauges
     REGISTRY.register(RequestsHosts())
-    # Generate some requests.
-    while True:
-        f_process_request()
-        f_requests_hosts()
+    main()

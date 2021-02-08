@@ -25,6 +25,9 @@ jobs:
           DEFAULT_BRANCH: master
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKERFILE_HADOLINT_FILE_NAME: .hadolint.yaml
+          PYTHON_FLAKE8_CONFIG_FILE: .flake8
           VALIDATE_PYTHON_BLACK: false
           VALIDATE_PYTHON_FLAKE8: false
           VALIDATE_PYTHON_PYLINT: false
+          VALIDATE_JSCPD: false
+
