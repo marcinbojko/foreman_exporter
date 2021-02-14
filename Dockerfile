@@ -8,7 +8,7 @@ USER python-user
 WORKDIR /app
 ENV PYTHONPATH '/app/'
 ENV TZ "Europe/Warsaw"
-LABEL VERSION="0.0.6"
+LABEL VERSION="0.0.7"
 LABEL RELEASE="foreman_exporter"
 LABEL MAINTAINER="marcinbojko"
 HEALTHCHECK --interval=30s --timeout=5s --retries=2 CMD curl -f http://localhost:8000 || exit 1

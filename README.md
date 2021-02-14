@@ -14,6 +14,7 @@
     - [Docker-compose example](#docker-compose-example)
     - [Prometheus scrape example](#prometheus-scrape-example)
   - [Kubernetes example](#kubernetes-example)
+  - [Kubertenes with Service Monitor example](#kubertenes-with-service-monitor-example)
   - [To DO](#to-do)
   - [About](#about)
 
@@ -191,6 +192,12 @@ To use:
   ```bash
   kubectl apply -f foreman-exporter.yaml
   ```
+
+## Kubertenes with Service Monitor example
+
+If you'd like to expose your metrics to Prometheus Operator:
+
+`./k8s/foreman-exporter-custom-metrics.yaml`
 
 ## To DO
 

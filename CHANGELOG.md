@@ -1,5 +1,10 @@
 # Changelog
 
+## 2021-02-14 0.0.7
+
+* reworked k8s example
+* added k8s example with service-monitor
+
 ## 2021-02-08 0.0.6
 
 * added /api/dashboards to gauges

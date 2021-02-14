@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: foreman-exporter
+     app: foreman-exporter
   name: foreman-exporter
 spec:
   replicas: 1
@@ -18,10 +18,11 @@ spec:
       - image: marcinbojko/foreman_exporter
         name: foreman-exporter-pod
         ports:
-          - containerPort: 8000
+          - name: http-8000-pods
+            containerPort: 8000
         livenessProbe:
           httpGet:
-            path: /
+            path: /metrics
             port: 8000
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -60,29 +61,41 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: foreman-exporter-service
+  name: foreman-exporter
+  labels:
+    app: foreman-exporter
 spec:
   selector:
     app: foreman-exporter
   type: ClusterIP
   ports:
-  - protocol: TCP
+  - name: metrics
     port: 8000
-    targetPort: 8000
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: foreman-exporter-ingress
+  name: foreman-exporter
   labels:
-      name: foreman-exporter
+    app: foreman-exporter
 spec:
   rules:
   - host: foreman-exporter.sample.com
     http:
       paths:
       - pathType: Prefix
-        path: "/"
+        path: "/metrics"
         backend:
-          serviceName: foreman-exporter-service
+          serviceName: foreman-exporter
           servicePort: 8000
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: foreman-exporter
+spec:
+  endpoints:
+  - port: metrics
+  selector:
+    matchLabels:
+      app: foreman-exporter

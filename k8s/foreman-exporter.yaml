@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: foreman-exporter
+  name: foreman-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: foreman-exporter
+  template:
+    metadata:
+      labels:
+        app: foreman-exporter
+    spec:
+      containers:
+      - image: marcinbojko/foreman_exporter
+        name: foreman-exporter-pod
+        ports:
+          - name: http-8000-pods
+            containerPort: 8000
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 2
+        resources:
+          limits:
+            cpu: 400m
+            memory: 200Mi
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        envFrom:
+        - secretRef:
+            name: foreman-exporter-env-secret
+        - configMapRef:
+            name: foreman-exporter-env-config
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: foreman-exporter-env-secret
+data:
+  FOREMAN_REQUEST_PASSWORD: YXBp
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: foreman-exporter-env-config
+data:
+  FOREMAN_REQUEST_INTERVAL: "120"
+  FOREMAN_REQUEST_TIMEOUT: "60"
+  FOREMAN_REQUEST_TLS_VERIFY: "false"
+  FOREMAN_REQUEST_URI: https://foreman.sample.com
+  FOREMAN_REQUEST_USER: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: foreman-exporter
+  labels:
+    app: foreman-exporter
+spec:
+  selector:
+    app: foreman-exporter
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 8000
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: foreman-exporter
+  labels:
+      app: foreman-exporter
+spec:
+  rules:
+  - host: foreman-exporter.sample.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/metrics"
+        backend:
+          serviceName: foreman-exporter
+          servicePort: 8000
