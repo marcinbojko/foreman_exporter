@@ -79,7 +79,7 @@ def f_requests_hosts():
     global FOREMAN_HOSTS_RESPONSE
     global FOREMAN_HOSTS_BODY
     try:
-        response = requests.get(REQUEST_URI+'api/hosts/', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response = requests.get(REQUEST_URI+'api/hosts?per_page=10000', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         body = json.loads(response.text)
         if 200 >= response.status_code <= 399:
@@ -102,7 +102,7 @@ def f_requests_dashboard():
     global FOREMAN_DASHBOARD_RESPONSE
     global FOREMAN_DASHBOARD_BODY
     try:
-        response = requests.get(REQUEST_URI+'api/dashboard', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response = requests.get(REQUEST_URI+'api/dashboard?per_page=10000', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         body = json.loads(response.text)
         if 200 >= response.status_code <= 399:

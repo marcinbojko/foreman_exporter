@@ -1,5 +1,9 @@
 # Changelog
 
+## 2021-02-18 0.0.8
+
+* fixed pagination limits (default API and GUI limit) for requests
+
 ## 2021-02-14 0.0.7
 
 * reworked k8s example
