@@ -1,4 +1,8 @@
 # Foreman Exporter for Prometheus
+
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/marcinbojko/foreman_exporter.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/marcinbojko/foreman_exporter/alerts/)
+[![Super-Linter](https://github.com/marcinbojko/foreman_exporter/actions/workflows/01_lint_me.yml/badge.svg)](https://github.com/marcinbojko/foreman_exporter/actions/workflows/01_lint_me.yml)
+
 <!-- TOC -->
 
 - [Foreman Exporter for Prometheus](#foreman-exporter-for-prometheus)
