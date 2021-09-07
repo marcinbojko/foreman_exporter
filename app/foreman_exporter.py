@@ -30,7 +30,7 @@ try:
             REQUEST_URI += "/"
     else:
         REQUEST_URI = "https://foreman.sample.com/"
-    REQUEST_HOSTNAME = (urllib.parse.urlparse(REQUEST_URI)).netloc
+        REQUEST_HOSTNAME = (urllib.parse.urlparse(REQUEST_URI)).netloc
     if os.getenv("FOREMAN_REQUEST_USER") is not None:
         REQUEST_USER = str(os.getenv("FOREMAN_REQUEST_USER"))
     else:
@@ -66,8 +66,6 @@ print("Variables:")
 print(f"REQUEST_URI        = {REQUEST_URI}")
 print(f"REQUEST_HOSTNAME   = {REQUEST_HOSTNAME}")
 print(f"REQUEST_USER       = {REQUEST_USER}")
-# getpass to hide passwords?
-print(f"REQUEST_PASSWORD   = {REQUEST_PASSWORD}")
 print(f"REQUEST_TLS_VERIFY = {REQUEST_TLS_VERIFY}")
 print(f"REQUEST_TIMEOUT    = {REQUEST_TIMEOUT}")
 print(f"REQUEST_INTERVAL   = {REQUEST_INTERVAL}")

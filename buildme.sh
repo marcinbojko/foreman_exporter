@@ -1,6 +1,6 @@
 #!/bin/bash
-release=$(grep "LABEL RELEASE" Dockerfile|awk '{print $2}'|cut -d\" -f2)
-version=$(grep "LABEL VERSION" Dockerfile|awk '{print $2}'|cut -d\" -f2)
+release=$(grep "LABEL RELEASE" -i Dockerfile|awk '{print $2}'|cut -d\" -f2)
+version=$(grep "LABEL VERSION" -i Dockerfile|awk '{print $2}'|cut -d\" -f2)
 echo Version: "$version" found
 echo Release: "$release" found
 if dockerfilelint Dockerfile; then

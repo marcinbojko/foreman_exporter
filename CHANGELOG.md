@@ -1,5 +1,11 @@
 # Changelog
 
+## 2021-09-07 0.0.9
+
+* disabled exposing passwords in logs
+* image built with latest python
+* Dockerfile validation with `hadolint`
+
 ## 2021-02-18 0.0.8
 
 * fixed pagination limits (default API and GUI limit) for requests
