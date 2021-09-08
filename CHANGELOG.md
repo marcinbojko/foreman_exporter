@@ -1,5 +1,9 @@
 # Changelog
 
+## 2021-09-08 0.0.10
+
+* fixed `REQUEST_HOSTS` being empty
+
 ## 2021-09-07 0.0.9
 
 * disabled exposing passwords in logs

@@ -6,7 +6,7 @@ import json
 import os
 import threading
 import time
-import urllib
+import urllib.parse
 
 import requests
 from prometheus_client import Summary, start_http_server
@@ -22,35 +22,47 @@ FOREMAN_DASHBOARD_BODY = None
 FOREMAN_DASHBOARD_RESPONSE = None
 FOREMAN_DASHBOARD_ITEMS = []
 
-
 try:
+    # host and uri
     if os.getenv("FOREMAN_REQUEST_URI") is not None:
         REQUEST_URI = str(os.getenv("FOREMAN_REQUEST_URI"))
         if not REQUEST_URI.endswith("/"):
             REQUEST_URI += "/"
     else:
         REQUEST_URI = "https://foreman.sample.com/"
-        REQUEST_HOSTNAME = (urllib.parse.urlparse(REQUEST_URI)).netloc
+    # display variables
+    REQUEST_HOSTNAME = (urllib.parse.urlparse(REQUEST_URI)).netloc
+    print(f"REQUEST_URI        = {REQUEST_URI}")
+    print(f"REQUEST_HOSTNAME   = {REQUEST_HOSTNAME}")
+    # user
     if os.getenv("FOREMAN_REQUEST_USER") is not None:
         REQUEST_USER = str(os.getenv("FOREMAN_REQUEST_USER"))
     else:
         REQUEST_USER = "api"
+    print(f"REQUEST_USER       = {REQUEST_USER}")
+    # password
     if os.getenv("FOREMAN_REQUEST_PASSWORD") is not None:
         REQUEST_PASSWORD = str(os.getenv("FOREMAN_REQUEST_PASSWORD"))
     else:
         REQUEST_PASSWORD = "api"
+    # tls_verify
     if os.getenv("FOREMAN_REQUEST_TLS_VERIFY") is not None:
         REQUEST_TLS_VERIFY = distutils.util.strtobool((os.getenv("FOREMAN_REQUEST_TLS_VERIFY")))
     else:
         REQUEST_TLS_VERIFY = False
+    print(f"REQUEST_TLS_VERIFY = {REQUEST_TLS_VERIFY}")
+    # request timeout
     if os.getenv("FOREMAN_REQUEST_TIMEOUT") is not None:
         REQUEST_TIMEOUT = int(os.getenv("FOREMAN_REQUEST_TIMEOUT"))
     else:
         REQUEST_TIMEOUT = 60
+    print(f"REQUEST_TIMEOUT    = {REQUEST_TIMEOUT}")
+    # request interval
     if os.getenv("FOREMAN_REQUEST_INTERVAL") is not None:
         REQUEST_INTERVAL = int(os.getenv("FOREMAN_REQUEST_INTERVAL"))
     else:
         REQUEST_INTERVAL = 120
+    print(f"REQUEST_INTERVAL   = {REQUEST_INTERVAL}")
 except NameError:
     timestamp = datetime.datetime.now()
     print(timestamp, "Evaluation of Environmental Variables failed, returning to defaults")
@@ -62,14 +74,14 @@ else:
     print(timestamp, "One of variables is empty")
     raise SystemExit(1)
 
-print("Variables:")
-print(f"REQUEST_URI        = {REQUEST_URI}")
-print(f"REQUEST_HOSTNAME   = {REQUEST_HOSTNAME}")
-print(f"REQUEST_USER       = {REQUEST_USER}")
-print(f"REQUEST_TLS_VERIFY = {REQUEST_TLS_VERIFY}")
-print(f"REQUEST_TIMEOUT    = {REQUEST_TIMEOUT}")
-print(f"REQUEST_INTERVAL   = {REQUEST_INTERVAL}")
-
+#print("Variables summary:")
+#print(f"REQUEST_URI        = {REQUEST_URI}")
+#print(f"REQUEST_HOSTNAME   = {REQUEST_HOSTNAME}")
+#print(f"REQUEST_USER       = {REQUEST_USER}")
+#print(f"REQUEST_TLS_VERIFY = {REQUEST_TLS_VERIFY}")
+#print(f"REQUEST_TIMEOUT    = {REQUEST_TIMEOUT}")
+#print(f"REQUEST_INTERVAL   = {REQUEST_INTERVAL}")
+#
 
 # initial data
 def f_requests_hosts():
