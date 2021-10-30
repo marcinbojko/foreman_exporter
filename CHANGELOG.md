@@ -1,5 +1,12 @@
 # Changelog
 
+## 2021-10-30 0.0.11
+
+* added request for `/api/status` to read foreman's version
+* in case of foreman's version higher than `2.2.0` pagination counter set to `all` instead of fake number
+* separation of classes to fit `Pylance` and `Pylint` tests
+* more verbose logs
+
 ## 2021-09-08 0.0.10
 
 * fixed `REQUEST_HOSTS` being empty

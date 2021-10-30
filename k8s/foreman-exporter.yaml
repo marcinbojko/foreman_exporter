@@ -72,12 +72,12 @@ spec:
   - name: metrics
     port: 8000
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: foreman-exporter
   labels:
-      app: foreman-exporter
+    app: foreman-exporter
 spec:
   rules:
   - host: foreman-exporter.sample.com
@@ -86,5 +86,7 @@ spec:
       - pathType: Prefix
         path: "/metrics"
         backend:
-          serviceName: foreman-exporter
-          servicePort: 8000
+          service:
+            name: foreman-exporter
+            port:
+              number: 8000

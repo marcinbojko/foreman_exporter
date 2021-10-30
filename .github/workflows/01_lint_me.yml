@@ -19,16 +19,16 @@ jobs:
 
       # Runs the Super-Linter action
       - name: Run Super-Linter
-        uses: github/super-linter@v3
+        uses: github/super-linter/slim@v4
         env:
           LINTER_RULES_PATH: /
           DEFAULT_BRANCH: master
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKERFILE_HADOLINT_FILE_NAME: .hadolint.yaml
           PYTHON_FLAKE8_CONFIG_FILE: .flake8
-          VALIDATE_PYTHON_BLACK: false
-          VALIDATE_PYTHON_FLAKE8: false
-          VALIDATE_PYTHON_PYLINT: false
-          VALIDATE_PYTHON_MYPY: false
-          VALIDATE_JSCPD: false
-          VALIDATE_KUBERNETES_KUBEVAL: false
+          VALIDATE_ALL_CODEBASE: true
+          VALIDATE_PYTHON_FLAKE8: true
+          VALIDATE_PYTHON_PYLINT: true
+          PYTHON_PYLINT_CONFIG_FILE: .pylintrc
+          VALIDATE_KUBERNETES_KUBEVAL: true
+          KUBERNETES_KUBEVAL_OPTIONS: --ignore-missing-schemas

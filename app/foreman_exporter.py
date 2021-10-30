@@ -9,6 +9,7 @@ import time
 import urllib.parse
 
 import requests
+from packaging import version
 from prometheus_client import Summary, start_http_server
 from prometheus_client.core import REGISTRY, GaugeMetricFamily
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -20,7 +21,12 @@ FOREMAN_HOSTS_BODY = None
 FOREMAN_HOSTS_RESPONSE = None
 FOREMAN_DASHBOARD_BODY = None
 FOREMAN_DASHBOARD_RESPONSE = None
+FOREMAN_STATUS_RESPONSE = None
+FOREMAN_STATUS_BODY = None
 FOREMAN_DASHBOARD_ITEMS = []
+FOREMAN_EXPORTER_VERSION = "0.0.11"
+FOREMAN_VERSION = None
+R_API_DEPTH = "1000"                 # how much elements get with every request to /api/hosts
 
 try:
     # host and uri
@@ -74,35 +80,44 @@ else:
     print(timestamp, "One of variables is empty")
     raise SystemExit(1)
 
-#print("Variables summary:")
-#print(f"REQUEST_URI        = {REQUEST_URI}")
-#print(f"REQUEST_HOSTNAME   = {REQUEST_HOSTNAME}")
-#print(f"REQUEST_USER       = {REQUEST_USER}")
-#print(f"REQUEST_TLS_VERIFY = {REQUEST_TLS_VERIFY}")
-#print(f"REQUEST_TIMEOUT    = {REQUEST_TIMEOUT}")
-#print(f"REQUEST_INTERVAL   = {REQUEST_INTERVAL}")
-#
 
 # initial data
+def f_requests_status():
+    ''' Process Foreman's status response '''
+    global FOREMAN_STATUS_RESPONSE
+    global FOREMAN_STATUS_BODY
+    try:
+        response = requests.get(REQUEST_URI+'api/status', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        body = json.loads(response.text)
+        if 200 >= response.status_code <= 399:
+            print(datetime.datetime.now(), f"Status request at {REQUEST_URI}api/status with code {response.status_code} took {response.elapsed.seconds} seconds")
+            FOREMAN_STATUS_BODY = body
+            FOREMAN_STATUS_RESPONSE = response
+        else:
+            print(datetime.datetime.now(), f"Response code not proper: {response.status_code}")
+    except requests.exceptions.RequestException as err:
+        print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/status failed with code {err}")
+        time.sleep(1)
+        raise SystemExit(err) from err
+
+
 def f_requests_hosts():
     ''' Process Foreman's hosts response '''
     global FOREMAN_HOSTS_RESPONSE
     global FOREMAN_HOSTS_BODY
     try:
-        response = requests.get(REQUEST_URI+'api/hosts?per_page=10000', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response = requests.get(REQUEST_URI+'api/hosts?per_page='+str(R_API_DEPTH), auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         body = json.loads(response.text)
         if 200 >= response.status_code <= 399:
-            l_timestamp = datetime.datetime.now()
-            print(f"{l_timestamp} Hosts request at {REQUEST_URI}api/hosts with code {response.status_code} took {response.elapsed.seconds} seconds")
+            print(datetime.datetime.now(), f"Hosts request at {REQUEST_URI}api/hosts with code {response.status_code} took {response.elapsed.seconds} seconds")
             FOREMAN_HOSTS_BODY = body
             FOREMAN_HOSTS_RESPONSE = response
         else:
-            l_timestamp = datetime.datetime.now()
-            print(f"{l_timestamp} Response code not proper: {response.status_code}")
+            print(datetime.datetime.now(), f"Response code not proper: {response.status_code}")
     except requests.exceptions.RequestException as err:
-        l_timestamp = datetime.datetime.now()
-        print(f"{l_timestamp} Request at: {REQUEST_URI}api/hosts failed with code {err}")
+        print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/hosts failed with code {err}")
         time.sleep(1)
         raise SystemExit(err) from err
 
@@ -116,16 +131,13 @@ def f_requests_dashboard():
         response.raise_for_status()
         body = json.loads(response.text)
         if 200 >= response.status_code <= 399:
-            l_timestamp = datetime.datetime.now()
-            print(f"{l_timestamp} Dashboard request at: {REQUEST_URI}api/dashboard with code {response.status_code} took {response.elapsed.seconds} seconds")
+            print(datetime.datetime.now(), f"Dashboard request at: {REQUEST_URI}api/dashboard with code {response.status_code} took {response.elapsed.seconds} seconds")
             FOREMAN_DASHBOARD_BODY = body
             FOREMAN_DASHBOARD_RESPONSE = response
         else:
-            l_timestamp = datetime.datetime.now()
-            print(f"{l_timestamp} Response code not proper:  {response.status_code}")
+            print(datetime.datetime.now(), f"Response code not proper:  {response.status_code}")
     except requests.exceptions.RequestException as err:
-        l_timestamp = datetime.datetime.now()
-        print(f"{l_timestamp} Request at: {REQUEST_URI}api/dashboard failed with code {err}")
+        print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/dashboard failed with code {err}")
         time.sleep(1)
         raise SystemExit(err) from err
 
@@ -138,7 +150,8 @@ class RequestsHosts:
 
     @staticmethod
     def collect():
-        ''' foremans gauges '''
+        ''' Register Prometheus Metrics for Foremant's hosts '''
+        # foremans gauges
         g_hosts = GaugeMetricFamily("foreman_exporter_hosts", 'foreman host status', labels=['hostname', 'domain', 'configuration', 'configuration_label',
                                     'puppet_status', 'global_label', 'puppet_environment', 'operatingsystem', 'foreman_hostname'])
         if FOREMAN_HOSTS_BODY is not None:
@@ -183,6 +196,16 @@ class RequestsHosts:
             yield g_hosts_count
         else:
             pass
+
+
+class RequestsDashboard:
+    ''' Register Prometheus Metrics for Foremant's Dashboards '''
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def collect():
+        ''' Register Prometheus Metrics for Foremant's Dashboards '''
         # Dashboard section
         g_dashboard = {}
         FOREMAN_DASHBOARD_ITEMS.clear()
@@ -207,6 +230,33 @@ class RequestsHosts:
             pass
 
 
+class RequestsStatus:
+    ''' Register Prometheus Metrics for Foremant's Status '''
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def collect():
+        ''' Register Prometheus Metrics for Foremant's Status '''
+        global R_API_DEPTH
+        # Status section
+        if FOREMAN_STATUS_BODY['version'] is not None:
+            r_status_version = str(FOREMAN_STATUS_BODY['version'])
+            print(datetime.datetime.now(), f"Foreman version found at: {REQUEST_URI} is {r_status_version}")
+            # since version 2.2.0 pagination can be set to all or number
+            if version.parse(r_status_version) > version.parse("2.2.0"):
+                R_API_DEPTH = "all"
+        else:
+            pass
+        # How long the process (request dashboard) was made
+        if FOREMAN_STATUS_RESPONSE.elapsed.seconds is not None:
+            g_status_time = GaugeMetricFamily("foreman_exporter_status_request_time_seconds", 'foreman status request time seconds', labels=['foreman_hostname'])
+            g_status_time.add_metric([REQUEST_HOSTNAME], int(FOREMAN_STATUS_RESPONSE.elapsed.seconds))
+            yield g_status_time
+        else:
+            pass
+
+
 # Create a metric to track time spent and requests made.
 REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
 
@@ -219,8 +269,7 @@ def f_process_request():
 
 def f_start_http():
     ''' Start http server '''
-    l_timestamp = datetime.datetime.now()
-    print(l_timestamp, "Starting http server")
+    print(datetime.datetime.now(), "Starting http server")
     # Start up the server to expose the metrics.
     start_http_server(8000)
 
@@ -231,14 +280,19 @@ def main():
     thread.start()
     thread.join()
     f_process_request()
+    f_requests_status()
     f_requests_hosts()
 
 
 if __name__ == '__main__':
     # Initial fill in
+    f_requests_status()
     f_requests_hosts()
     f_requests_dashboard()
+    print(datetime.datetime.now(), f"Script version is {FOREMAN_EXPORTER_VERSION}")
     f_start_http()
     # Register gauges
     REGISTRY.register(RequestsHosts())
+    REGISTRY.register(RequestsDashboard())
+    REGISTRY.register(RequestsStatus())
     main()

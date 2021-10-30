@@ -1,0 +1,39 @@
+name: build_and_push_image
+on:
+  push:
+    branches:
+      - 'main'
+      - 'master'
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: lint
+        uses: luke142367/Docker-Lint-Action@v1.0.0
+        with:
+          target: Dockerfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push
+        id: build_push
+        run: |
+          export release=$(grep -i "LABEL RELEASE" Dockerfile|awk '{print $2}'|cut -d\" -f2)
+          export version=$(grep -i "LABEL VERSION" Dockerfile|awk '{print $2}'|cut -d\" -f2)
+          export maintainer=$(grep -i "LABEL MAINTAINER" Dockerfile|awk '{print $2}'|cut -d\" -f2)
+          export DOCKER_BUILDKIT=1
+          docker build --pull --no-cache -t  "$maintainer/$release":"$version" .
+          docker image inspect "$maintainer/$release":"$version"
+          docker push "$maintainer/$release":"$version"
+          docker tag  "$maintainer/$release":"$version" "$maintainer/$release:latest"
+          docker push "$maintainer/$release:latest"
