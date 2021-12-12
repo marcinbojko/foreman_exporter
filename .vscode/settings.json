@@ -1,5 +1,6 @@
 {
   "python.pythonPath": "/usr/bin/python3",
   "python.linting.pylintEnabled": true,
-  "python.linting.enabled": true
+  "python.linting.enabled": true,
+  "python.analysis.extraPaths": ["app","/usr/local/lib/python3.10/site-packages"]
 }

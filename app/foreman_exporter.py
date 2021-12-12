@@ -7,7 +7,8 @@ import os
 import threading
 import time
 import urllib.parse
-
+import urllib.request
+import logging
 import requests
 from packaging import version
 from prometheus_client import Summary, start_http_server
@@ -24,9 +25,16 @@ FOREMAN_DASHBOARD_RESPONSE = None
 FOREMAN_STATUS_RESPONSE = None
 FOREMAN_STATUS_BODY = None
 FOREMAN_DASHBOARD_ITEMS = []
-FOREMAN_EXPORTER_VERSION = "0.0.11"
+FOREMAN_EXPORTER_VERSION = "0.0.12"
 FOREMAN_VERSION = None
 R_API_DEPTH = "1000"                 # how much elements get with every request to /api/hosts
+
+try:
+    # set logging
+    logging.basicConfig(format='%(asctime)s %(message)s', encoding='utf-8', level=logging.INFO)
+except NameError:
+    timestamp = datetime.datetime.now()
+    print(timestamp, "Logging failed, returning to defaults")
 
 try:
     # host and uri
@@ -61,13 +69,13 @@ try:
     if os.getenv("FOREMAN_REQUEST_TIMEOUT") is not None:
         REQUEST_TIMEOUT = int(os.getenv("FOREMAN_REQUEST_TIMEOUT"))
     else:
-        REQUEST_TIMEOUT = 60
+        REQUEST_TIMEOUT = 15
     print(f"REQUEST_TIMEOUT    = {REQUEST_TIMEOUT}")
     # request interval
     if os.getenv("FOREMAN_REQUEST_INTERVAL") is not None:
         REQUEST_INTERVAL = int(os.getenv("FOREMAN_REQUEST_INTERVAL"))
     else:
-        REQUEST_INTERVAL = 120
+        REQUEST_INTERVAL = 30
     print(f"REQUEST_INTERVAL   = {REQUEST_INTERVAL}")
 except NameError:
     timestamp = datetime.datetime.now()
@@ -86,6 +94,7 @@ def f_requests_status():
     ''' Process Foreman's status response '''
     global FOREMAN_STATUS_RESPONSE
     global FOREMAN_STATUS_BODY
+    global R_API_DEPTH
     try:
         response = requests.get(REQUEST_URI+'api/status', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
@@ -94,6 +103,15 @@ def f_requests_status():
             print(datetime.datetime.now(), f"Status request at {REQUEST_URI}api/status with code {response.status_code} took {response.elapsed.seconds} seconds")
             FOREMAN_STATUS_BODY = body
             FOREMAN_STATUS_RESPONSE = response
+            # Status section
+            if FOREMAN_STATUS_BODY['version'] is not None:
+                r_status_version = str(FOREMAN_STATUS_BODY['version'])
+                print(datetime.datetime.now(), f"Foreman version found at: {REQUEST_URI} is {r_status_version}")
+                # since version 2.2.0 pagination can be set to all or number
+                if version.parse(r_status_version) > version.parse("2.2.0"):
+                    R_API_DEPTH = "all"
+            else:
+                pass
         else:
             print(datetime.datetime.now(), f"Response code not proper: {response.status_code}")
     except requests.exceptions.RequestException as err:
@@ -231,23 +249,14 @@ class RequestsDashboard:
 
 
 class RequestsStatus:
-    ''' Register Prometheus Metrics for Foremant's Status '''
+    ''' Register Prometheus Metrics for Foreman's Status '''
     def __init__(self):
         pass
 
     @staticmethod
     def collect():
         ''' Register Prometheus Metrics for Foremant's Status '''
-        global R_API_DEPTH
-        # Status section
-        if FOREMAN_STATUS_BODY['version'] is not None:
-            r_status_version = str(FOREMAN_STATUS_BODY['version'])
-            print(datetime.datetime.now(), f"Foreman version found at: {REQUEST_URI} is {r_status_version}")
-            # since version 2.2.0 pagination can be set to all or number
-            if version.parse(r_status_version) > version.parse("2.2.0"):
-                R_API_DEPTH = "all"
-        else:
-            pass
+#        global R_API_DEPTH
         # How long the process (request dashboard) was made
         if FOREMAN_STATUS_RESPONSE.elapsed.seconds is not None:
             g_status_time = GaugeMetricFamily("foreman_exporter_status_request_time_seconds", 'foreman status request time seconds', labels=['foreman_hostname'])
@@ -269,7 +278,7 @@ def f_process_request():
 
 def f_start_http():
     ''' Start http server '''
-    print(datetime.datetime.now(), "Starting http server")
+    print(datetime.datetime.now(), "Starting http server at port 8000")
     # Start up the server to expose the metrics.
     start_http_server(8000)
 
@@ -279,9 +288,10 @@ def main():
     thread = threading.Thread(target=f_process_request)
     thread.start()
     thread.join()
-    f_process_request()
     f_requests_status()
     f_requests_hosts()
+    f_requests_dashboard()
+    f_process_request()
 
 
 if __name__ == '__main__':
@@ -295,4 +305,5 @@ if __name__ == '__main__':
     REGISTRY.register(RequestsHosts())
     REGISTRY.register(RequestsDashboard())
     REGISTRY.register(RequestsStatus())
-    main()
+    while True:
+        main()

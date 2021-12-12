@@ -1,5 +1,10 @@
 # Changelog
 
+## 2021-12-12 0.0.12
+
+* fixed main loop logic
+* preparation to logging
+
 ## 2021-10-30 0.0.11
 
 * added request for `/api/status` to read foreman's version
