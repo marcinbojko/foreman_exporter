@@ -2,6 +2,7 @@
 ''' foreman exporter '''
 import datetime
 import json
+import distutils.core
 import logging
 import os
 import sys
@@ -24,8 +25,9 @@ FOREMAN_DASHBOARD_RESPONSE = None
 FOREMAN_STATUS_RESPONSE = None
 FOREMAN_STATUS_BODY = None
 FOREMAN_DASHBOARD_ITEMS = []
-FOREMAN_EXPORTER_VERSION = "0.0.13"
+FOREMAN_EXPORTER_VERSION = "0.0.14"
 FOREMAN_VERSION = None
+
 R_API_DEPTH = "1000"                 # how much elements get with every request to /api/hosts
 
 try:
@@ -60,7 +62,7 @@ try:
         REQUEST_PASSWORD = "api"
     # tls_verify
     if os.getenv("FOREMAN_REQUEST_TLS_VERIFY") is not None:
-        REQUEST_TLS_VERIFY = bool((os.getenv("FOREMAN_REQUEST_TLS_VERIFY")))
+        REQUEST_TLS_VERIFY = bool(distutils.util.strtobool((os.getenv("FOREMAN_REQUEST_TLS_VERIFY"))))
     else:
         REQUEST_TLS_VERIFY = False
     print(f"REQUEST_TLS_VERIFY = {REQUEST_TLS_VERIFY}")
@@ -121,7 +123,6 @@ def f_requests_status():
     except httpx.HTTPStatusError as err:
         print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/status failed with code {err}")
         time.sleep(1)
-        # raise SystemExit(err) from err
 
 
 def f_requests_hosts():
@@ -146,7 +147,6 @@ def f_requests_hosts():
     except httpx.HTTPStatusError as err:
         print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/hosts failed with code {err}")
         time.sleep(1)
-        # raise SystemExit(err) from err
 
 
 def f_requests_dashboard():
@@ -171,7 +171,6 @@ def f_requests_dashboard():
     except httpx.HTTPStatusError as err:
         print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/dashboard failed with code {err}")
         time.sleep(1)
-        # raise SystemExit(err) from err
 
 
 # register class

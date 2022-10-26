@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022-10-26 0.0.14
+
+* fixed `FOREMAN_REQUEST_TLS_VERIFY` handling
+
 ## 2022-10-26 0.0.13
 
 * better `json` handling

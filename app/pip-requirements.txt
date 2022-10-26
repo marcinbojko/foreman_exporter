@@ -1,4 +1,3 @@
 prometheus-client
-#requests
 packaging
 httpx
