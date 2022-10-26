@@ -1,21 +1,20 @@
 #!/bin/python3
 ''' foreman exporter '''
 import datetime
-import distutils.core
 import json
+import logging
 import os
+import sys
 import threading
 import time
 import urllib.parse
 import urllib.request
-import logging
-import requests
+from json.decoder import JSONDecodeError
+
+import httpx
 from packaging import version
 from prometheus_client import Summary, start_http_server
 from prometheus_client.core import REGISTRY, GaugeMetricFamily
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 # Variables
 FOREMAN_HOSTS_BODY = None
@@ -25,7 +24,7 @@ FOREMAN_DASHBOARD_RESPONSE = None
 FOREMAN_STATUS_RESPONSE = None
 FOREMAN_STATUS_BODY = None
 FOREMAN_DASHBOARD_ITEMS = []
-FOREMAN_EXPORTER_VERSION = "0.0.12"
+FOREMAN_EXPORTER_VERSION = "0.0.13"
 FOREMAN_VERSION = None
 R_API_DEPTH = "1000"                 # how much elements get with every request to /api/hosts
 
@@ -61,7 +60,7 @@ try:
         REQUEST_PASSWORD = "api"
     # tls_verify
     if os.getenv("FOREMAN_REQUEST_TLS_VERIFY") is not None:
-        REQUEST_TLS_VERIFY = distutils.util.strtobool((os.getenv("FOREMAN_REQUEST_TLS_VERIFY")))
+        REQUEST_TLS_VERIFY = bool((os.getenv("FOREMAN_REQUEST_TLS_VERIFY")))
     else:
         REQUEST_TLS_VERIFY = False
     print(f"REQUEST_TLS_VERIFY = {REQUEST_TLS_VERIFY}")
@@ -96,9 +95,14 @@ def f_requests_status():
     global FOREMAN_STATUS_BODY
     global R_API_DEPTH
     try:
-        response = requests.get(REQUEST_URI+'api/status', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response = httpx.get(REQUEST_URI+'api/status', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
-        body = json.loads(response.text)
+        try:
+            body = json.loads(response.text)
+        except JSONDecodeError:
+            print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/status failed, response is not json")
+            time.sleep(1)
+            sys.exit()
         if 200 >= response.status_code <= 399:
             print(datetime.datetime.now(), f"Status request at {REQUEST_URI}api/status with code {response.status_code} took {response.elapsed.seconds} seconds")
             FOREMAN_STATUS_BODY = body
@@ -114,10 +118,10 @@ def f_requests_status():
                 pass
         else:
             print(datetime.datetime.now(), f"Response code not proper: {response.status_code}")
-    except requests.exceptions.RequestException as err:
+    except httpx.HTTPStatusError as err:
         print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/status failed with code {err}")
         time.sleep(1)
-        raise SystemExit(err) from err
+        # raise SystemExit(err) from err
 
 
 def f_requests_hosts():
@@ -125,19 +129,24 @@ def f_requests_hosts():
     global FOREMAN_HOSTS_RESPONSE
     global FOREMAN_HOSTS_BODY
     try:
-        response = requests.get(REQUEST_URI+'api/hosts?per_page='+str(R_API_DEPTH), auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response = httpx.get(REQUEST_URI+'api/hosts?per_page='+str(R_API_DEPTH), auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
-        body = json.loads(response.text)
+        try:
+            body = json.loads(response.text)
+        except JSONDecodeError:
+            print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/hosts failed, response is not json")
+            time.sleep(1)
+            sys.exit()
         if 200 >= response.status_code <= 399:
             print(datetime.datetime.now(), f"Hosts request at {REQUEST_URI}api/hosts with code {response.status_code} took {response.elapsed.seconds} seconds")
             FOREMAN_HOSTS_BODY = body
             FOREMAN_HOSTS_RESPONSE = response
         else:
             print(datetime.datetime.now(), f"Response code not proper: {response.status_code}")
-    except requests.exceptions.RequestException as err:
+    except httpx.HTTPStatusError as err:
         print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/hosts failed with code {err}")
         time.sleep(1)
-        raise SystemExit(err) from err
+        # raise SystemExit(err) from err
 
 
 def f_requests_dashboard():
@@ -145,19 +154,24 @@ def f_requests_dashboard():
     global FOREMAN_DASHBOARD_RESPONSE
     global FOREMAN_DASHBOARD_BODY
     try:
-        response = requests.get(REQUEST_URI+'api/dashboard?per_page=10000', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
+        response = httpx.get(REQUEST_URI+'api/dashboard?per_page=10000', auth=(REQUEST_USER, REQUEST_PASSWORD), verify=REQUEST_TLS_VERIFY, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
-        body = json.loads(response.text)
+        try:
+            body = json.loads(response.text)
+        except JSONDecodeError:
+            print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/dashboard failed, response is not json")
+            time.sleep(1)
+            sys.exit()
         if 200 >= response.status_code <= 399:
             print(datetime.datetime.now(), f"Dashboard request at: {REQUEST_URI}api/dashboard with code {response.status_code} took {response.elapsed.seconds} seconds")
             FOREMAN_DASHBOARD_BODY = body
             FOREMAN_DASHBOARD_RESPONSE = response
         else:
             print(datetime.datetime.now(), f"Response code not proper:  {response.status_code}")
-    except requests.exceptions.RequestException as err:
+    except httpx.HTTPStatusError as err:
         print(datetime.datetime.now(), f"Request at: {REQUEST_URI}api/dashboard failed with code {err}")
         time.sleep(1)
-        raise SystemExit(err) from err
+        # raise SystemExit(err) from err
 
 
 # register class
@@ -201,7 +215,7 @@ class RequestsHosts:
         else:
             pass
         # How long the process was made
-        if FOREMAN_HOSTS_RESPONSE.elapsed.seconds is not None:
+        if FOREMAN_HOSTS_RESPONSE is not None:
             g_hosts_time = GaugeMetricFamily("foreman_exporter_hosts_request_time_seconds", 'foreman host request time seconds', labels=['foreman_hostname'])
             g_hosts_time.add_metric([REQUEST_HOSTNAME], int(FOREMAN_HOSTS_RESPONSE.elapsed.seconds))
             yield g_hosts_time
@@ -240,7 +254,7 @@ class RequestsDashboard:
         else:
             pass
         # How long the process (request dashboard) was made
-        if FOREMAN_DASHBOARD_RESPONSE.elapsed.seconds is not None:
+        if FOREMAN_DASHBOARD_RESPONSE is not None:
             g_dashboard_time = GaugeMetricFamily("foreman_exporter_dashboard_request_time_seconds", 'foreman dashboard request time seconds', labels=['foreman_hostname'])
             g_dashboard_time.add_metric([REQUEST_HOSTNAME], int(FOREMAN_DASHBOARD_RESPONSE.elapsed.seconds))
             yield g_dashboard_time
@@ -258,7 +272,7 @@ class RequestsStatus:
         ''' Register Prometheus Metrics for Foremant's Status '''
 #        global R_API_DEPTH
         # How long the process (request dashboard) was made
-        if FOREMAN_STATUS_RESPONSE.elapsed.seconds is not None:
+        if FOREMAN_STATUS_RESPONSE is not None:
             g_status_time = GaugeMetricFamily("foreman_exporter_status_request_time_seconds", 'foreman status request time seconds', labels=['foreman_hostname'])
             g_status_time.add_metric([REQUEST_HOSTNAME], int(FOREMAN_STATUS_RESPONSE.elapsed.seconds))
             yield g_status_time

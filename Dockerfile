@@ -1,4 +1,4 @@
-FROM python:3.10.1-alpine AS stage
+FROM python:3.11-alpine AS stage
 COPY app/* /app/
 RUN apk add --no-cache --update -t deps curl tzdata \
   && python -m pip install --upgrade pip --no-cache-dir \
@@ -9,7 +9,7 @@ USER python-user
 WORKDIR /app
 ENV PYTHONPATH '/app/'
 ENV TZ "Europe/Warsaw"
-LABEL version="0.0.12"
+LABEL version="0.0.13"
 LABEL release="foreman_exporter"
 LABEL maintainer="marcinbojko"
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:8000 || exit 1

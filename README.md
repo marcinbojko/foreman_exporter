@@ -20,6 +20,7 @@
   - [Kubernetes example](#kubernetes-example)
   - [Kubertenes with Service Monitor example](#kubertenes-with-service-monitor-example)
   - [To DO](#to-do)
+  - [Tests](#tests)
   - [About](#about)
 
 <!-- /TOC -->
@@ -69,8 +70,9 @@ It can be used as a stats tool for configuration applying status, hosts status, 
 
 ### Tested with
 
+- Foreman 2.0.x
+- Foreman 2.2.x
 - Foreman 1.22.x
-
 - Foreman 1.23.x
 
 ## Usage
@@ -205,12 +207,17 @@ If you'd like to expose your metrics to Prometheus Operator:
 
 ## To DO
 
-- replace prometheus http server with `Flask`
-- change path to /metrics
 - add more API checks (facts maybe?)
 - ~~Kubernetes setup~~
-- switch to `urllib3` instead of `requests`
 - improve python skills
+
+## Tests
+
+- pyreq
+- isort
+- flake8
+- pylint
+- pylance
 
 ## About
 

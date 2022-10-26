@@ -1,5 +1,13 @@
 # Changelog
 
+## 2022-10-26 0.0.13
+
+* better `json` handling
+* switch to `httpx`
+* application no longer raises system exception when request fails
+* switch to python 3.11
+* removed requirements on distutils
+
 ## 2021-12-12 0.0.12
 
 * fixed main loop logic
