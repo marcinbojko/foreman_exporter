@@ -190,8 +190,7 @@ class RequestsHosts:
                 # Name - let's skip processing if field is None
                 if str(each['name']) is None:
                     continue
-                else:
-                    name = str(each['name'])
+                name = str(each['name'])
                 # domain
                 if str(each['domain_name']) is None:
                     domain = 'unknown'
@@ -229,7 +228,7 @@ class RequestsHosts:
                     environment_name = str(each['environment_name'])
                 # Operatingsystem
                 if str(each['operatingsystem_name']) is None:
-                    operatingsystem= 'unknown'
+                    operatingsystem = 'unknown'
                 else:
                     operatingsystem = str(each['operatingsystem_name'])
                 if (
