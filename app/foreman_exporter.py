@@ -25,7 +25,7 @@ FOREMAN_DASHBOARD_RESPONSE = None
 FOREMAN_STATUS_RESPONSE = None
 FOREMAN_STATUS_BODY = None
 FOREMAN_DASHBOARD_ITEMS = []
-FOREMAN_EXPORTER_VERSION = "0.0.14"
+FOREMAN_EXPORTER_VERSION = "0.0.15-dev.2"
 FOREMAN_VERSION = None
 
 R_API_DEPTH = "1000"                 # how much elements get with every request to /api/hosts
@@ -187,27 +187,55 @@ class RequestsHosts:
                                     'puppet_status', 'global_label', 'puppet_environment', 'operatingsystem', 'foreman_hostname'])
         if FOREMAN_HOSTS_BODY is not None:
             for each in FOREMAN_HOSTS_BODY['results']:
-                name = str(each['name'])
-                domain = str(each['domain_name'])
-                status = (each['global_status'])
-                global_label = str(each['global_status_label'])
-                configuration_status = str(each['configuration_status'])
-                configuration_status_label = str(each['configuration_status_label'])
-                puppet_status = str(each['puppet_status'])
-                environment_name = str(each['environment_name'])
-                operatingsystem = str(each['operatingsystem_name'])
+                # Name - let's skip processing if field is None
+                if str(each['name']) is None:
+                    continue
+                else:
+                    name = str(each['name'])
+                # domain
+                if str(each['domain_name']) is None:
+                    domain = 'unknown'
+                else:
+                    domain = str(each['domain_name'])
+                # status
+                if (each['global_status']) is None:
+                    status = '199'
+                else:
+                    status = (each['global_status'])
+                # Global status
+                if str(each['global_status_label']) is None:
+                    global_label = 'unknown'
+                else:
+                    global_label = str(each['global_status_label'])
+                # Configuration status
+                if str(each['configuration_status']) is None:
+                    configuration_status = '199'
+                else:
+                    configuration_status = str(each['configuration_status'])
+                # Configuration status label
+                if str(each['configuration_status_label']) is None:
+                    configuration_status_label = 'unknown'
+                else:
+                    configuration_status_label = str(each['configuration_status_label'])
+                # Puppet status
+                if str(each['puppet_status']) is None:
+                    puppet_status = '199'
+                else:
+                    puppet_status = str(each['puppet_status'])
+                # Environment
+                if str(each['environment_name']) is None:
+                    environment_name = 'unknown'
+                else:
+                    environment_name = str(each['environment_name'])
+                # Operatingsystem
+                if str(each['operatingsystem_name']) is None:
+                    operatingsystem= 'unknown'
+                else:
+                    operatingsystem = str(each['operatingsystem_name'])
                 if (
                   name is None or domain is None or status is None or configuration_status is None or configuration_status_label is None
                   ):
                     continue
-                if global_label is None:
-                    global_label = '199'
-                if puppet_status is None:
-                    puppet_status = '199'
-                if environment_name is None:
-                    environment_name = 'unknown'
-                if operatingsystem is None:
-                    operatingsystem = 'unknown'
                 g_hosts.add_metric([name, domain, configuration_status, configuration_status_label, puppet_status, global_label,
                                     environment_name, operatingsystem, REQUEST_HOSTNAME], status)
             yield g_hosts
